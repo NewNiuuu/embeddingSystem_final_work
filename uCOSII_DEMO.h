@@ -71,7 +71,7 @@ extern APP_RECORD App_Record[APP_RECORD_NUM];
 //state of three LED£ºLED2,LED3,LED4
 OS_EXT KEYSTATE_TYPE keystate[3];
 //semaphore for 1.Synchronous 2.task initially give up CPU
-OS_EVENT *sem;
+OS_EXT OS_EVENT *sem;
 
 
 //===================================================================
