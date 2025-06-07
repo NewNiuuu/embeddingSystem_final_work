@@ -1,110 +1,102 @@
-#include	"uCOSII_Demo.h"
-//task SysManage base parameters------------------------------------------------------------------------------------------------------------------------
-#define TASK_SysManage_PRIO    	25
-static OS_STK task_SysManage_stk[STK_SIZE_DEF];
-static void task_SysManage(void *p_arg);
+/**
+  ******************************************************************************
+  * File Name          : uCOSII_Demo.h
+  * Description        : demo code for STM32F407 
+  ******************************************************************************
+  *
+  * COPYRIGHT(c) 2019 jkuang@BUPT
+  *
+  ******************************************************************************
+  */
+#ifndef UCOSII_DEMO_H
+#define UCOSII_DEMO_H
+#ifdef __cplusplus
+		 extern "C" {
+#endif
 
-//MsgQ of task SysManage---------------------------------------------------------------------------------------------------------------------------------
-#define TASK_SysManage_QSIZE		10
-static void *TaskSysManage_Qarray[TASK_SysManage_QSIZE];
+#include  "ucos_ii.h"
+#include	"farsight_f407.h"
+#include 	"usart_it.h"
+#include  "message.h"
 
-//--------------SysManage Task--------------------
-#define PRINT_EN_KEYSCAN
-// Key Value
-#define KEY_UP				1
-#define KEY_DOWN			0
+//Common Stick Size of Task
+#define STK_SIZE_DEF	128
 
-//declaration of function 
-static void TmrSynCallbackFnct (void *p_arg);
-
-//============================================================
-//task SysManage Create
-INT8U Task_SysManage_Creat(void)
+//===================================================================
+//app task record 
+typedef struct _APP_RECORD
 {
-	INT8U err, i;
+	OS_EVENT*	tQid;			// task Q ID
+	INT16U    tPrio;		// task priority
+	INT16U		tRes;			// reserved
+} APP_RECORD;
 
-	//Key Switch Record initial
-	for(i=0; i<KEY_NUMBER; i++)
-	{
-		KEYSWITCH(i+1) = 1;
-	}
-	
-	//Creat SysManage task
-	err = OSTaskCreate(	task_SysManage, (void*)0,
-											&task_SysManage_stk[STK_SIZE_DEF-1], TASK_SysManage_PRIO);
-	return(err);
+#define APP_RECORD_NUM	OS_MAX_TASKS	//Max. number of tasks supported
+
+extern APP_RECORD App_Record[APP_RECORD_NUM];
+
+#define APP_TQID(x)		App_Record[x].tQid	
+#define APP_TPRIO(x)	App_Record[x].tPrio	
+
+//Task or Driver ID
+//Driver ID
+#define DRV_ID_usart1			-1
+//System Task ID
+#define OS_TID_Timer			0		// OS Timer task id use '0'
+
+//User Task ID
+//define task id of Task LEDx and SysManage----------------------------------------------------------------------------------------------------------
+#define APP_TID_usart1		1
+#define APP_TID_keyscan		2
+#define APP_TID_LEDx			3
+#define APP_TID_SysManage	4
+#define APP_TID_tmrtest		5
+
+#define KEYSTATE_TYPE INT8U
+
+//Keycode definition(the mcode when you press KEYx)------------------------------------------------------------------------------------------------
+#define MC_KEY1 1
+#define MC_KEY2 2
+#define MC_KEY3 3
+#define MC_KEY4 4
+//Tmrcode definition(the mcode when tmr send for change LEDx) 
+#define MC_TMR0 6
+#define MC_TMRSYN 7
+#define MC_TMR1 8
+#define MC_TMR2 9
+//index of state array
+#define KEY2_IDX 0
+#define KEY3_IDX 1
+#define KEY4_IDX 2
+//state of three LED£ºLED2,LED3,LED4
+OS_EXT KEYSTATE_TYPE keystate[3];
+//semaphore for 1.Synchronous 2.task initially give up CPU
+OS_EVENT *sem;
+
+
+//===================================================================
+//Key Scan
+#define KEY_NUMBER		4
+extern 	INT8U 	KeySwitch[KEY_NUMBER];	//Board key switch identification, value toggled while specified key pressed.
+
+#define	KEYSWITCH(x)	KeySwitch[x-1]
+
+INT8U Task_KeyScan_Creat(void);
+
+//definition of task LEDx create-----------------------------------------------------------------------------------------------------------------------
+INT8U Task_LEDx_Creat(void);
+
+
+//===================================================================
+// prototypes
+int User_App_Initial(void);
+void USER_Print_Decimal(INT32U);
+void USER_Print_OSIdleCtr(void);
+
+
+#ifdef __cplusplus
 }
+#endif
+#endif /* UCOSII_DEMO_H */
 
-//SysManageµÄÈÎÎñº¯Êý
-static void task_SysManage(void *p_arg)
-{
-	
-	//register APP_TID_SysManage and TASK_SysManage_PRIO--------------------------------------------------------------------------------------------------
-	APP_TPRIO(APP_TID_SysManage) = TASK_SysManage_PRIO;
-	//Create Q of task SysManage--------------------------------------------------------------------------------------------------------------------------
-	APP_TQID(APP_TID_SysManage) = 
-							OSQCreate(&TaskSysManage_Qarray[0], TASK_SysManage_QSIZE);
-	if(APP_TQID(APP_TID_SysManage) == NULL)
-	{
-		APP_TPRIO(APP_TID_SysManage) = 0xFF;
-		OSTaskDel(OS_PRIO_SELF);
-		return;
-	}
-	//create a task count to determine whether synchornized-----------------------------------------------------------------------------------------------
-	INT8U task_cnt=0;
-	//create a synTimer for synchronize
-	static OS_TMR *tmrSyn; 
-	INT8U err;
-	tmrSyn = OSTmrCreate((INT32U )5,
-												(INT32U )0,
-												(INT8U  )OS_TMR_OPT_ONE_SHOT,
-												(OS_TMR_CALLBACK)TmrSynCallbackFnct,
-												(void * )0,
-												(INT8U *)"TmrSyn",
-												(INT8U *)&err);
-	if(err)
-	{
-		OSQDel(APP_TQID(APP_TID_tmrtest),OS_DEL_ALWAYS,&err);
-		APP_TQID(APP_TID_tmrtest) = NULL;
-		APP_TPRIO(APP_TID_tmrtest) = 0xFF;
-		OSTaskDel(OS_PRIO_SELF);
-		return;
-	}
-	 //the circulation for Synchronous--------------------------------------------------------------------------------------------------------------------
-    while(1){
-        //utilize timer to check MsgQ
-        //start timer
-				OSTmrStart(tmrSyn, &err);  //start timer for synchronize
-				INT8U err;
-        //pend MsgQ
-        MESSAGE_HEAD *msgP=(MESSAGE_HEAD *)OSQPend(APP_TQID(APP_TID_SysManage), 0, &err);
-        if(msgP->mCode==MC_TMRSYN)
-				{
-						USER_USART1_print("TIME OUT ERROR");
-						return;
-				}
-        if(msgP->mSendTsk==APP_TID_keyscan||msgP->mSendTsk==APP_TID_LEDx)
-        {
-            task_cnt++;
-        }
-        if(task_cnt>=2)
-            break;
-    }
-	
-	USER_USART1_print("\n====task LEDx and keyscan Created====\n");
-
-	while(1)
-	{	       
-		
-				USER_USART1_print("Key 4\n");
-
-	}
-		
-}
-
-//============================================================
-static void TmrSynCallbackFnct (void *p_arg)
-{
-	//send msg to SysManage task Q
-	Msg_SendShort(MC_TMRSYN, APP_TID_SysManage, APP_TID_SysManage, 0, 0);
-}
+/************************ (C) COPYRIGHT jkuang@BUPT *****END OF FILE****/
