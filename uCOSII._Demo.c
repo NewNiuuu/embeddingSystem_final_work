@@ -54,10 +54,14 @@ static void task_reciver(void *p_arg);
 #define TASK_TMRTST_PRIO    					19
 static OS_STK task_tmrtst_stk[STK_SIZE_DEF];
 static void task_tmrtst(void *p_arg);
+
+
 #endif //DEMO_03
 
-/* Private variables ---------------------------------------------------------*/
-
+/*global variables ---------------------------------------------------------*/
+//keystate and sem real definition in xxx.c file
+   KEYSTATE_TYPE keystate[NUM_KEY_CHG];
+   OS_EVENT *sem;
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -79,8 +83,7 @@ int User_App_Initial(void)
 	LED2_OFF;
 	LED3_OFF;
 	LED4_OFF;
-
-
+	
 	//Task record array initial
 	for(i=0; i<APP_RECORD_NUM; i++)
 	{
@@ -106,14 +109,10 @@ int User_App_Initial(void)
 		return(err);
 	
 	//task KeyScan Create
-	err = Task_KeyScan_Creat();
+	err = Task_SysManage_Creat();
 	if(err)
 		return(err);
 	
-	//task LEDx Create--------------------------------------------------------------------------------------------------------------------------------
-	err = Task_LEDx_Creat();
-	if(err)
-		return(err);
 
 
 #ifdef DEMO_01
