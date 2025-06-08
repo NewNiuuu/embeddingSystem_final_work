@@ -14,7 +14,7 @@ static void *TaskSysManage_Qarray[TASK_SysManage_QSIZE];
 #define KEY_UP				1
 #define KEY_DOWN			0
 
-//declaration of function 
+//declaration of TmrSyn callback function 
 static void TmrSynCallbackFnct (void *p_arg);
 
 //============================================================
@@ -38,7 +38,7 @@ INT8U Task_SysManage_Creat(void)
 //SysManageµÄÈÎÎñº¯Êý
 static void task_SysManage(void *p_arg)
 {
-	
+	INT8U err, i;
 	//register APP_TID_SysManage and TASK_SysManage_PRIO--------------------------------------------------------------------------------------------------
 	APP_TPRIO(APP_TID_SysManage) = TASK_SysManage_PRIO;
 	//Create Q of task SysManage--------------------------------------------------------------------------------------------------------------------------
@@ -52,9 +52,18 @@ static void task_SysManage(void *p_arg)
 	}
 	//create a task count to determine whether synchornized-----------------------------------------------------------------------------------------------
 	INT8U task_cnt=0;
+	//create a pointer 'msgP' to bind with msgQ.
+	MESSAGE_HEAD *msgP;
+	//practically use sem-----------------------------------------------------------------------------------------------------------------------
+	sem = OSSemCreate(0);
+	//initalize the keystate[] array, make sure every element is start with state 0-------------------------------------------------------------
+	for(i=0;i<NUM_KEY_CHG;i++)
+	{
+			keystate[i] = 0;
+	}
+	
 	//create a synTimer for synchronize
 	static OS_TMR *tmrSyn; 
-	INT8U err;
 	tmrSyn = OSTmrCreate((INT32U )5,
 												(INT32U )0,
 												(INT8U  )OS_TMR_OPT_ONE_SHOT,
@@ -64,9 +73,9 @@ static void task_SysManage(void *p_arg)
 												(INT8U *)&err);
 	if(err)
 	{
-		OSQDel(APP_TQID(APP_TID_tmrtest),OS_DEL_ALWAYS,&err);
-		APP_TQID(APP_TID_tmrtest) = NULL;
-		APP_TPRIO(APP_TID_tmrtest) = 0xFF;
+		OSQDel(APP_TQID(APP_TID_SysManage),OS_DEL_ALWAYS,&err);
+		APP_TQID(APP_TID_SysManage) = NULL;
+		APP_TPRIO(APP_TID_SysManage) = 0xFF;
 		OSTaskDel(OS_PRIO_SELF);
 		return;
 	}
@@ -86,7 +95,7 @@ static void task_SysManage(void *p_arg)
         //start timer
 				OSTmrStart(tmrSyn, &err);  //start timer for synchronize
         //pend MsgQ
-        MESSAGE_HEAD *msgP=(MESSAGE_HEAD *)OSQPend(APP_TQID(APP_TID_SysManage), 0, &err);
+        msgP=(MESSAGE_HEAD *)OSQPend(APP_TQID(APP_TID_SysManage), 0, &err);
         if(msgP->mCode==MC_TMRSYN)
 				{
 						USER_USART1_print("TIME OUT ERROR");
@@ -97,7 +106,15 @@ static void task_SysManage(void *p_arg)
             task_cnt++;
         }
         if(task_cnt>=2)
-            break;
+				{
+					//P(semaphore)
+						OSSemPost(sem);
+						break;
+				}
+            
+				
+				//release msg mem----------------------------------------------------------------------------------------------------------------------------
+				Msg_MemPut(msgP);
     }
 	
 	USER_USART1_print("\n====task LEDx and keyscan Created====\n");
