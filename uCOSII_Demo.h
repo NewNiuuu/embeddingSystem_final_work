@@ -68,8 +68,10 @@ extern APP_RECORD App_Record[APP_RECORD_NUM];
 #define KEY2_IDX 0
 #define KEY3_IDX 1
 #define KEY4_IDX 2
+//number of keys use for change
+#define NUM_KEY_CHG 3
 //state of three LED£ºLED2,LED3,LED4
-OS_EXT KEYSTATE_TYPE keystate[3];
+OS_EXT KEYSTATE_TYPE keystate[NUM_KEY_CHG];
 //semaphore for 1.Synchronous 2.task initially give up CPU
 OS_EXT OS_EVENT *sem;
 
@@ -83,8 +85,10 @@ extern 	INT8U 	KeySwitch[KEY_NUMBER];	//Board key switch identification, value t
 
 INT8U Task_KeyScan_Creat(void);
 
-//definition of task LEDx create-----------------------------------------------------------------------------------------------------------------------
+//prototype of task LEDx create-----------------------------------------------------------------------------------------------------------------------
 INT8U Task_LEDx_Creat(void);
+//prototype of task SysManage create------------------------------------------------------------------------------------------------------------------
+INT8U Task_SysManage_Creat(void);
 
 
 //===================================================================
