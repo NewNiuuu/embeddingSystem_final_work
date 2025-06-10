@@ -122,6 +122,7 @@ static void task_LEDx(void *p_arg)
 	//
 				static INT16U led_to_operate = 0;
 	
+	/*
 	while(1)
 	{	       
 				
@@ -132,10 +133,14 @@ static void task_LEDx(void *p_arg)
 				
 				//set a local var to cut down mem assess times
 				INT16U mcode=msgP->mCode;
-				USER_USART1_print("\n mcode=:");
+				//key pressed flag, to avoid tmr msg changing the key state(go into the second switch)
+				static INT8U if_key_press = 0;
+				USER_USART1_print("\n mcode=");
 				USER_Print_Decimal(mcode);
 				
 				if(mcode<5){
+					//key press flag set 1
+						if_key_press=1;
 						LED_on(mcode);
 						err=OSTmrStart(tmr0,&err);
 						if(err==OS_FALSE){
@@ -184,54 +189,149 @@ static void task_LEDx(void *p_arg)
 							break;
 					}
 				}
-					//change 1.keystate poniter 2.LEDx sparkle state
-					switch(*cur_state){
-					case 0:{
-							*cur_state=1;
-						//make sure none of tmr1 and tmr2 start
-							OSTmrStop(tmr1, OS_TMR_OPT_NONE,(void*)0,&err);
-							OSTmrStop(tmr2, OS_TMR_OPT_NONE,(void*)0,&err);
-							LED_on(led_to_operate);
-							break;
-					}
-					case 1:{
-							*cur_state=2;
-						//make sure none of tmr0 and tmr2 start
-							OSTmrStop(tmr0, OS_TMR_OPT_NONE,(void*)0,&err);
-							OSTmrStop(tmr2, OS_TMR_OPT_NONE,(void*)0,&err);
-							err = OSTmrStart(tmr1, &err); 
-							if(err==OS_FALSE){
-									USER_USART1_print("\n ERR:tmr1 fail to start!");
-									return;
-								}
-							break;
-					}
-					case 2:{
-							*cur_state=0;
-						//make sure none of tmr0 and tmr1 start
-							OSTmrStop(tmr0, OS_TMR_OPT_NONE,(void*)0,&err);
-							OSTmrStop(tmr1, OS_TMR_OPT_NONE,(void*)0,&err);
-							err = OSTmrStart(tmr2, &err);
-							if(err==OS_FALSE){
-								USER_USART1_print("\n ERR:tmr2 fail to start!");
-								return;
+				if(if_key_press){
+							USER_USART1_print("\n if_key_press=");
+							USER_Print_Decimal(if_key_press);
+						//change 1.keystate poniter 2.LEDx sparkle state
+							switch(*cur_state){
+							case 0:{
+									*cur_state=1;
+								//make sure none of tmr1 and tmr2 start
+									OSTmrStop(tmr1, OS_TMR_OPT_NONE,(void*)0,&err);
+									OSTmrStop(tmr2, OS_TMR_OPT_NONE,(void*)0,&err);
+									LED_on(led_to_operate);
+									break;
 							}
-							LED_off(led_to_operate);
-							break;
-					}
-					default:{
-						USER_USART1_print("\n WARNING: state handler into default.");
-							break;
-					}
-					
+							case 1:{
+									*cur_state=2;
+								//make sure none of tmr0 and tmr2 start
+									OSTmrStop(tmr0, OS_TMR_OPT_NONE,(void*)0,&err);
+									OSTmrStop(tmr2, OS_TMR_OPT_NONE,(void*)0,&err);
+									err = OSTmrStart(tmr1, &err); 
+									if(err==OS_FALSE){
+											USER_USART1_print("\n ERR:tmr1 fail to start!");
+											return;
+										}
+									break;
+							}
+							case 2:{
+									*cur_state=0;
+								//make sure none of tmr0 and tmr1 start
+									OSTmrStop(tmr0, OS_TMR_OPT_NONE,(void*)0,&err);
+									OSTmrStop(tmr1, OS_TMR_OPT_NONE,(void*)0,&err);
+									err = OSTmrStart(tmr2, &err);
+									if(err==OS_FALSE){
+										USER_USART1_print("\n ERR:tmr2 fail to start!");
+										return;
+									}
+									LED_off(led_to_operate);
+									break;
+							}
+							default:{
+								USER_USART1_print("\n WARNING: state handler into default.");
+									break;
+							}
+							
 
+						}
 				}
+					
 				
 				
 				Msg_MemPut(msgP);
 
-	}
+	}*/
+		while(1)
+	{	       
+		MESSAGE_HEAD *msgP=(MESSAGE_HEAD *)OSQPend(APP_TQID(APP_TID_LEDx), 0, &err);
+		if(err != OS_ERR_NONE){
+			continue;
+		}
 		
+		INT16U mcode=msgP->mCode;
+		USER_USART1_print("\n LEDx received mcode=");
+		USER_Print_Decimal(mcode);
+		
+		//case key preprocess-----------------------------------------------------------------------------------------------------------------------
+		switch(mcode)
+		{
+			case MC_KEY1:
+				// KEY1:reset all 3 keys' states
+				for(i=0; i<NUM_KEY_CHG; i++){
+					keystate[i] = 0;
+				}
+				//make sure none of tmr1 and tmr2 start
+				OSTmrStop(tmr1, OS_TMR_OPT_NONE,(void*)0,&err);
+				OSTmrStop(tmr2, OS_TMR_OPT_NONE,(void*)0,&err);
+				// turn off all LED
+				LED_off(2); LED_off(3); LED_off(4);
+				USER_USART1_print(" -> ALL STATES RESET");
+				break;
+
+			case MC_KEY2:
+				cur_state = &keystate[KEY2_IDX];
+				led_to_operate = 2;
+
+				// --- ???????????? ---
+				switch(*cur_state) {
+					case 0: // ???0?????1 (??)
+						*cur_state = 1;
+						OSTmrStop(tmr1, OS_TMR_OPT_NONE,(void*)0,&err);
+						OSTmrStop(tmr2, OS_TMR_OPT_NONE,(void*)0,&err);
+						LED_on(led_to_operate);
+						USER_USART1_print(" -> LED2 State[ON]");
+						break;
+					case 1: // ???1?????2 (??)
+						*cur_state = 2;
+						OSTmrStart(tmr1, &err);
+						USER_USART1_print(" -> LED2 State[SLOW BLINK]");
+						break;
+					case 2: // ???2?????0 (??)
+						*cur_state = 0;
+						OSTmrStop(tmr1, OS_TMR_OPT_NONE,(void*)0,&err);
+						OSTmrStart(tmr2, &err);
+						USER_USART1_print(" -> LED2 State[FAST BLINK]");
+						break;
+				}
+				// --- ????? ---
+				break; // MC_KEY2 ????
+
+			case MC_KEY3:
+				cur_state = &keystate[KEY3_IDX];
+				led_to_operate = 3;
+				// ... ?????KEY3???????? ...
+				USER_USART1_print(" -> KEY3 pressed");
+				break;
+
+			case MC_KEY4:
+				cur_state = &keystate[KEY4_IDX];
+				led_to_operate = 4;
+				// ... ?????KEY4???????? ...
+				USER_USART1_print(" -> KEY4 pressed");
+				break;
+
+			// tmr1/tmr2:toggle led
+			case MC_TMR1:
+			case MC_TMR2:
+				if(led_to_operate > 0) {
+					LED_toggle(led_to_operate);
+				}
+				break;
+			
+				// tmr0: press any key just sparkle once
+			case MC_TMR0:
+				if(led_to_operate > 0) {
+					LED_toggle(led_to_operate);
+				}
+				break;
+
+			default:
+				USER_USART1_print("\n WARNING: unhandled mcode.");
+				break;
+		}
+		
+		Msg_MemPut(msgP);
+	}
 		
   
 }
