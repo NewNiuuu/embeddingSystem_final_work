@@ -46,6 +46,7 @@ static void task_SysManage(void *p_arg)
 							OSQCreate(&TaskSysManage_Qarray[0], TASK_SysManage_QSIZE);
 	if(APP_TQID(APP_TID_SysManage) == NULL)
 	{
+		USER_USART1_print("Fail to create SysManage Msg Queue\n");
 		APP_TPRIO(APP_TID_SysManage) = 0xFF;
 		OSTaskDel(OS_PRIO_SELF);
 		return;
@@ -64,7 +65,7 @@ static void task_SysManage(void *p_arg)
 	
 	//create a synTimer for synchronize
 	static OS_TMR *tmrSyn; 
-	tmrSyn = OSTmrCreate((INT32U )5,
+	tmrSyn = OSTmrCreate((INT32U )50,
 												(INT32U )0,
 												(INT8U  )OS_TMR_OPT_ONE_SHOT,
 												(OS_TMR_CALLBACK)TmrSynCallbackFnct,
@@ -98,7 +99,7 @@ static void task_SysManage(void *p_arg)
         msgP=(MESSAGE_HEAD *)OSQPend(APP_TQID(APP_TID_SysManage), 0, &err);
         if(msgP->mCode==MC_TMRSYN)
 				{
-						USER_USART1_print("TIME OUT ERROR");
+						USER_USART1_print("\n TIME OUT ERROR FROM SYSMANAGE");
 						return;
 				}
         if(msgP->mSendTsk==APP_TID_keyscan||msgP->mSendTsk==APP_TID_LEDx)
@@ -107,8 +108,6 @@ static void task_SysManage(void *p_arg)
         }
         if(task_cnt>=2)
 				{
-					//P(semaphore)
-						OSSemPost(sem);
 						break;
 				}
             
@@ -117,15 +116,24 @@ static void task_SysManage(void *p_arg)
 				Msg_MemPut(msgP);
     }
 	
-	USER_USART1_print("\n====task LEDx and keyscan Created====\n");
-
+	USER_USART1_print("\n====task LEDx and keyscan initialized successfully!syn success!====\n");
+	//P(semaphore)£º
+	OSSemPost(sem);
+		
 	while(1)
 	{	       
 		
-				USER_USART1_print("Key 4\n");
-
+				USER_USART1_print("\n task SysManage while body");
+		/*USER_USART1_print("sem->OSEventGrp:");
+				USER_Print_Decimal(sem->OSEventGrp);*/
+				/*msgP=(MESSAGE_HEAD *)OSQPend(APP_TQID(APP_TID_SysManage), 0, &err);
+				if(err==OS_ERR_NONE){
+					USER_USART1_print("SysManage received message");
+				}
+				Msg_MemPut(msgP);*/
+				
+				OSTimeDlyHMSM(0,0,0,400);
 	}
-		
 }
 
 //============================================================
