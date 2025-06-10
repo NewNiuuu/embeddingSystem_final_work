@@ -27,8 +27,8 @@ APP_RECORD App_Record[APP_RECORD_NUM];
 #define DEMO_03
 
 #ifdef DEMO_01
-#define TASK1_PRIO    								11
-#define TASK2_PRIO    								12
+#define TASK1_PRIO    								40
+#define TASK2_PRIO    								41
 
 static OS_STK task1_stk[STK_SIZE_DEF];
 static OS_STK task2_stk[STK_SIZE_DEF];
@@ -38,8 +38,8 @@ static void task2(void *p_arg);
 #endif //DEMO_01
 
 #ifdef DEMO_02
-#define TASK_SENDER_PRIO    					17
-#define TASK_RECIVER_PRIO    					16
+#define TASK_SENDER_PRIO    					42
+#define TASK_RECIVER_PRIO    					43
 
 static OS_STK task_sender_stk[STK_SIZE_DEF];
 static OS_STK task_reciver_stk[STK_SIZE_DEF];
@@ -51,9 +51,10 @@ static void task_reciver(void *p_arg);
 #endif //DEMO_02
 
 #ifdef DEMO_03
-#define TASK_TMRTST_PRIO    					19
-static OS_STK task_tmrtst_stk[STK_SIZE_DEF];
-static void task_tmrtst(void *p_arg);
+//------------------------------------------------------------------------------------------------------------------------------------------------
+//#define TASK_TMRTST_PRIO    					19
+//static OS_STK task_tmrtst_stk[STK_SIZE_DEF];
+//static void task_tmrtst(void *p_arg);
 
 
 #endif //DEMO_03
@@ -108,10 +109,7 @@ int User_App_Initial(void)
 	if(err)
 		return(err);
 	
-	//task KeyScan Create
-	err = Task_SysManage_Creat();
-	if(err)
-		return(err);
+	
 	
 
 
@@ -135,7 +133,12 @@ int User_App_Initial(void)
 #endif //DEMO_02
 
 #ifdef DEMO_03
-	err = OSTaskCreate(task_tmrtst, (void*)0, &task_tmrtst_stk[STK_SIZE_DEF-1], TASK_TMRTST_PRIO);
+	//del--------------------------------------------------------------------------------------------------------------------------------------------
+	//err = OSTaskCreate(task_tmrtst, (void*)0, &task_tmrtst_stk[STK_SIZE_DEF-1], TASK_TMRTST_PRIO);
+	//if(err)
+		//return(err);
+	//task KeyScan Create
+	err = Task_SysManage_Creat();
 	if(err)
 		return(err);
 #endif //DEMO_03
@@ -292,19 +295,20 @@ static void task_reciver(void *p_arg)
 //------------ DEMO 03 ----------------
 #define PRINT_EN_DEMO03
 
-static OS_TMR *tstTmr1; //one shot timer
-static OS_TMR *tstTmr2; //periodic timer
+//static OS_TMR *tstTmr1; //one shot timer
+//static OS_TMR *tstTmr2; //periodic timer
 
 
 //msgQ of timer test task
-#define TASK_TMRTST_QSIZE		10
-static void *TaskTmrtst_Qarray[TASK_TMRTST_QSIZE];
+//#define TASK_TMRTST_QSIZE		10
+//static void *TaskTmrtst_Qarray[TASK_TMRTST_QSIZE];
 
 
 //============================================================
+/*
 static void Tmr1CallbackFnct (void *p_arg)
 {
-/* Do something when timer #1 expires */
+ //Do something when timer #1 expires 
 	INT8U err;
 
 	OSTmrStart(tstTmr1, &err);  //restart timer
@@ -312,19 +316,20 @@ static void Tmr1CallbackFnct (void *p_arg)
 	//send msg to tmetst task Q
 	Msg_SendShort(MC_TMRTST_TMR1, OS_TID_Timer, APP_TID_tmrtest, 0, 0);
 }
-
+*/
+/*
 //============================================================
 static void Tmr2CallbackFnct (void *p_arg)
 {
-/* Do something when timer #2 expires */
+//Do something when timer #2 expires 
 
 	//send msg to tmetst task Q
 	Msg_SendShort(MC_TMRTST_TMR2, OS_TID_Timer, APP_TID_tmrtest, 0, 0);
 }
-
+*/
 
 //============================================================
-static void task_tmrtst(void *p_arg)
+/*static void task_tmrtst(void *p_arg)
 {
 	INT8U 				err;
 	MESSAGE_HEAD *msgP;
@@ -335,7 +340,7 @@ static void task_tmrtst(void *p_arg)
 
 	//Create Q of timer test task
 	APP_TQID(APP_TID_tmrtest) = 
-							OSQCreate(&TaskTmrtst_Qarray[0], TASK_TMRTST_QSIZE);
+						OSQCreate(&TaskTmrtst_Qarray[0], TASK_TMRTST_QSIZE);
 	if(APP_TQID(APP_TID_tmrtest) == NULL)
 	{
 		APP_TPRIO(APP_TID_tmrtest) = 0xFF;
@@ -385,7 +390,7 @@ static void task_tmrtst(void *p_arg)
 		return;
 
 
-	APP_TPRIO(APP_TID_tmrtest) = TASK_TMRTST_PRIO;
+//	APP_TPRIO(APP_TID_tmrtest) = TASK_TMRTST_PRIO;
 
 	USER_USART1_print("\n====Task Timer Test Initialized====\n");
 
@@ -459,7 +464,7 @@ static void task_tmrtst(void *p_arg)
 #endif
   }
 }
-
+*/
 #endif //DEMO_03
 
 
