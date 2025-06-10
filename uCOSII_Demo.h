@@ -50,7 +50,7 @@ extern APP_RECORD App_Record[APP_RECORD_NUM];
 #define APP_TID_keyscan		2
 #define APP_TID_LEDx			3
 #define APP_TID_SysManage	4
-#define APP_TID_tmrtest		5
+//#define APP_TID_tmrtest		5
 
 #define KEYSTATE_TYPE INT8U
 
@@ -64,6 +64,9 @@ extern APP_RECORD App_Record[APP_RECORD_NUM];
 #define MC_TMRSYN 7
 #define MC_TMR1 8
 #define MC_TMR2 9
+//syn mcode from different tasks
+#define MC_TASK_keyscan 10
+#define MC_TASK_LEDx 		11
 //index of state array
 #define KEY2_IDX 0
 #define KEY3_IDX 1
